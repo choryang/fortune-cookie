@@ -4,5 +4,12 @@ export default defineEventHandler(async () => {
     id: number;
     text: string;
   }[];
-  return { fortunes };
+
+  // 출력 시에도 살균 (DB에 이미 저장된 악성 데이터 방어)
+  const safeFortunes = fortunes.map((f) => ({
+    id: f.id,
+    text: sanitizeText(f.text),
+  }));
+
+  return { fortunes: safeFortunes };
 });

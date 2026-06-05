@@ -4,18 +4,17 @@ export default defineEventHandler(async (event) => {
   await enforceRateLimit(event, { action: "add", limit: 20, windowSec: 3600 });
 
   const body = await readBody<{ text?: string }>(event);
-  const text = (body?.text ?? "").toString().trim();
+  const raw = (body?.text ?? "").toString().trim();
 
-  if (!text) {
-    throw createError({ statusCode: 400, statusMessage: "문구를 입력해 주세요." });
-  }
-  if (text.length > 80) {
-    throw createError({ statusCode: 400, statusMessage: "문구는 80자 이내로 입력해 주세요." });
+  // SQL 인젝션 + XSS 종합 검증 & 살균
+  const validation = validateFortuneInput(raw);
+  if (!validation.ok) {
+    throw createError({ statusCode: 400, statusMessage: validation.reason });
   }
 
   const sql = await ensureSchema();
   const rows = (await sql`
-    insert into fortunes (text) values (${text})
+    insert into fortunes (text) values (${validation.text})
     returning id, text
   `) as { id: number; text: string }[];
 
