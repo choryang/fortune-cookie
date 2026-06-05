@@ -82,15 +82,24 @@ function showToast(msg: string) {
   toastTimer = setTimeout(() => (toast.value = ""), 2400);
 }
 
-function pick(i: number) {
+async function pick(i: number) {
   if (picking.value !== null || fortunes.value.length === 0) return;
   picking.value = i;
-  setTimeout(() => {
+
+  // 서버에서 가중치 기반으로 운세 뽑기 (덜 나온 문구 우선)
+  try {
+    const result = await $fetch<{ fortune: { id: number; text: string } }>("/api/fortunes/pick");
+    // 쿠키 깨지는 애니메이션 대기
+    await new Promise((r) => setTimeout(r, 850));
+    current.value = result.fortune.text;
+  } catch {
+    // API 실패 시 클라이언트 폴백 (기존 균등 랜덤)
+    await new Promise((r) => setTimeout(r, 850));
     const list = fortunes.value;
     current.value = list[Math.floor(Math.random() * list.length)].text;
-    mode.value = "reveal";
-    picking.value = null;
-  }, 850);
+  }
+  mode.value = "reveal";
+  picking.value = null;
 }
 
 function reset() {

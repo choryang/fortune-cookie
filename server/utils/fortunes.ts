@@ -37,8 +37,14 @@ export async function ensureSchema() {
     create table if not exists fortunes (
       id serial primary key,
       text text not null,
+      pick_count int not null default 0,
       created_at timestamptz not null default now()
     )
+  `;
+
+  // 기존 테이블에 pick_count 컬럼이 없으면 추가 (마이그레이션)
+  await sql`
+    alter table fortunes add column if not exists pick_count int not null default 0
   `;
 
   // rate limit 용 fixed-window 카운터 테이블
