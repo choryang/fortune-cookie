@@ -62,11 +62,10 @@
 </template>
 
 <script setup lang="ts">
-type Fortune = { id: number; text: string };
-
-const { data } = await useFetch<{ fortunes: Fortune[] }>("/api/fortunes");
-const fortunes = computed(() => data.value?.fortunes ?? []);
-const count = computed(() => (data.value ? fortunes.value.length : null));
+// 서버에서 개수만 받음 (전체 목록은 보안상 노출하지 않음)
+const { data } = await useFetch<{ count: number }>("/api/fortunes");
+const count = computed(() => data.value?.count ?? null);
+const hasAny = computed(() => (count.value ?? 0) > 0);
 
 const mode = ref<"home" | "reveal">("home");
 const current = ref("");
@@ -83,20 +82,18 @@ function showToast(msg: string) {
 }
 
 async function pick(i: number) {
-  if (picking.value !== null || fortunes.value.length === 0) return;
+  if (picking.value !== null || !hasAny.value) return;
   picking.value = i;
 
   // 서버에서 가중치 기반으로 운세 뽑기 (덜 나온 문구 우선)
   try {
-    const result = await $fetch<{ fortune: { id: number; text: string } }>("/api/fortunes/pick");
+    const result = await $fetch<{ fortune: { text: string } }>("/api/fortunes/pick");
     // 쿠키 깨지는 애니메이션 대기
     await new Promise((r) => setTimeout(r, 850));
     current.value = result.fortune.text;
   } catch {
-    // API 실패 시 클라이언트 폴백 (기존 균등 랜덤)
     await new Promise((r) => setTimeout(r, 850));
-    const list = fortunes.value;
-    current.value = list[Math.floor(Math.random() * list.length)].text;
+    current.value = "운세를 불러오지 못했어요. 다시 시도해 주세요.";
   }
   mode.value = "reveal";
   picking.value = null;

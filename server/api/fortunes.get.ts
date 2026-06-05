@@ -1,15 +1,11 @@
+/**
+ * GET /api/fortunes
+ *
+ * 운세 "개수"만 반환합니다.
+ * 전체 문구 목록은 노출하지 않습니다 (보안).
+ */
 export default defineEventHandler(async () => {
   const sql = await ensureSchema();
-  const fortunes = (await sql`select id, text from fortunes order by id`) as {
-    id: number;
-    text: string;
-  }[];
-
-  // 출력 시에도 살균 (DB에 이미 저장된 악성 데이터 방어)
-  const safeFortunes = fortunes.map((f) => ({
-    id: f.id,
-    text: sanitizeText(f.text),
-  }));
-
-  return { fortunes: safeFortunes };
+  const rows = (await sql`select count(*)::int as count from fortunes`) as { count: number }[];
+  return { count: rows[0]?.count ?? 0 };
 });

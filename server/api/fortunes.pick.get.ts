@@ -1,17 +1,18 @@
 /**
  * GET /api/fortunes/pick
  *
- * 가중치 기반 랜덤 운세 뽑기.
+ * 가중치 기반 랜덤 운세 뽑기 + Rate Limit.
  * - pick_count가 낮을수록(= 덜 뽑힌 문구) 가중치가 높아서 잘 뽑힘
  * - pick_count가 높을수록(= 자주 나온 문구) 가중치가 낮아서 덜 뽑힘
  * - 가중치 공식: weight = 1 / (pick_count + 1)
- *   → 0번 뽑힌 문구: 가중치 1.0
- *   → 3번 뽑힌 문구: 가중치 0.25
- *   → 9번 뽑힌 문구: 가중치 0.1
  *
- * 뽑힌 문구의 pick_count를 +1 증가시킵니다.
+ * Rate limit: 분당 30회 / 시간당 200회 (대량 스크래핑 방지)
  */
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
+  // 스크래핑 방지: pick을 반복 호출해서 전체 목록을 추론하는 것을 막음
+  await enforceRateLimit(event, { action: "pick", limit: 30, windowSec: 60 });
+  await enforceRateLimit(event, { action: "pick", limit: 200, windowSec: 3600 });
+
   const sql = await ensureSchema();
 
   const fortunes = (await sql`
@@ -44,5 +45,6 @@ export default defineEventHandler(async () => {
   // 뽑힌 문구의 pick_count 증가
   await sql`update fortunes set pick_count = pick_count + 1 where id = ${picked.id}`;
 
-  return { fortune: { id: picked.id, text: picked.text } };
+  // 텍스트 살균 후 반환 (id는 노출하지 않음)
+  return { fortune: { text: sanitizeText(picked.text) } };
 });

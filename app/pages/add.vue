@@ -32,16 +32,14 @@
 </template>
 
 <script setup lang="ts">
-type Fortune = { id: number; text: string };
-
 const MAX = 80;
 const text = ref("");
 const loading = ref(false);
 const done = ref(false);
 const toast = ref("");
 
-const { data, refresh } = await useFetch<{ fortunes: Fortune[] }>("/api/fortunes");
-const count = computed(() => (data.value ? data.value.fortunes.length : null));
+const { data, refresh } = await useFetch<{ count: number }>("/api/fortunes");
+const count = computed(() => data.value?.count ?? null);
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 function showToast(msg: string) {
